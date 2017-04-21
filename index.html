@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+</head>
+<body>
+    <h2>add keywords</h2>
+    <input type="text" id="add-keyword">
+    <hr>
+    <h2>search</h2>
+    <input type="text" id="search-input">
+    <hr>
+    <h2>result</h2>
+    <div id="search-status"></div>
+    <ul id="result-list"></ul>
+
+
+
+    <script>
+        let nodes
+        let matchTask
+        let data = [
+            'hello world'
+        ]
+
+        onload = function () {
+            nodes = {
+                addKeyword: document.getElementById('add-keyword'),
+                input: document.getElementById('search-input'),
+                status: document.getElementById('search-status'),
+                list: document.getElementById('result-list')
+            }
+
+            nodes.addKeyword.onkeyup = addKeywordToData
+            nodes.input.oninput = nodes.input.onpropertychange = handleBlurMatch
+        }
+        function addKeywordToData(e){
+            let words = e.target.value.trim()
+            if( e.keyCode === 13 && words.length > 0){
+                console.log(1)
+                data.push(words)
+                e.target.value = ''
+            }
+        }
+        function matchFn(key, str){
+            let keyLen = key.length, strLen = str.length
+            let keyIndex = 0, strIndex = 0
+            let keyCode, strCode
+            let replace = []
+
+            while( keyIndex !== keyLen && strIndex !== strLen){
+                keyCode = key.charAt(keyIndex).toLowerCase()
+                strCode = str.charAt(strIndex).toLowerCase()
+                if( keyCode === strCode ){
+                    replace.push(strIndex)
+                    ++keyIndex
+                }
+                ++strIndex
+            }
+
+            return keyIndex === keyLen && [true, stringReplace(str, replace) , str] || [false]
+        }
+        function clearList(){
+            nodes.list.innerHTML = '<i>empty</i>'
+        }
+
+        function stringReplace(str, replace){
+            var newStr = ''
+            var nextIndex = 0
+            for (var i = 0; i < replace.length; ++i) {
+                var idx = replace[i];
+                newStr += str.substr(nextIndex, idx - nextIndex) + "<b>" + str.charAt(idx) + "</b>";
+                nextIndex = idx + 1;
+            }
+            return newStr + str.substr(nextIndex, str.length - nextIndex);
+        }
+        function handleBlurMatch(e){
+            e.preventDefault()
+
+            let key = e.target.value
+            if( !key.length || !data.length ) return clearList()
+
+            if( matchTask ){
+                matchTask.stop()
+                matchTask = null
+            }
+
+            matchTask = new ResultFromMatch( key, data, matchFn, function(result){
+                if( !result.length) return clearList()
+                nodes.list.innerHTML = "<li>" + result.join('</li><li>')+"</li>"
+            } )
+        }
+        class ResultFromMatch{
+            constructor(){
+                let args = [].slice.call(arguments)
+                this.results = []
+                this.index = 0
+                this.timer = setTimeout(e => this.run(...args), 100)
+            }
+
+            run(key, data, matchFn, compile){
+                let start = Date.now(), time
+                for( let i = 0; i < data.length; i++){
+                    let str = data[i]
+                    let result = matchFn(key, str)
+
+                    if( result[0] )
+                        this.results.push(result[1])
+                }
+                time = Date.now() - start
+                nodes.status.innerHTML = `<i>${time} ms</i>`
+                console.log(this.results)
+
+                compile(this.results)
+            }
+
+            stop(){
+                clearTimeout(this.timer)
+            }
+        }
+
+    </script>
+</body>
+</html>
